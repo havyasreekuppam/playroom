@@ -41,6 +41,7 @@ dependencies {
 
     implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
+    implementation("io.socket:socket.io-client:2.1.1")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
