@@ -1,7 +1,6 @@
 package com.playroom.app.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,25 +19,27 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.playroom.app.model.Game
 import com.playroom.app.ui.theme.DeepBackground
 import com.playroom.app.ui.theme.NeonGreen
 import com.playroom.app.ui.theme.NeonPurple
 import com.playroom.app.ui.theme.PlayRoomTheme
 
 /**
- * Phase 1: static home screen.
- * Games are hardcoded for now - Phase 2 moves them into a Game data model.
- * The JOIN ROOM button does nothing yet - it becomes real in Phase 7.
+ * Phase 3: the lobby now renders a [Game] list and has a search bar.
+ * Player counts are static for now - Phase 8 wires real-time counts.
+ * JOIN ROOM still does nothing - it becomes real in Phase 7.
  */
 @Composable
 fun HomeScreen() {
@@ -63,6 +64,27 @@ fun HomeScreen() {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ----- Search (Phase 3) -----
+        OutlinedTextField(
+            value = "",
+            onValueChange = { /* Phase 4: state moves into the ViewModel */ },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            placeholder = {
+                Text("Search games...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            },
+            leadingIcon = { Text(text = "🔍", fontSize = 18.sp) },
+            shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = NeonGreen,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+            )
+        )
+
         Spacer(modifier = Modifier.height(28.dp))
 
         // ----- "Live Games" section title -----
@@ -82,17 +104,16 @@ fun HomeScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ----- Game cards (static in Phase 1) -----
-        GameCard(name = "Ludo", category = "Casual", players = "4 / 8 players")
-        Spacer(modifier = Modifier.height(16.dp))
-        GameCard(name = "Chess", category = "Strategy", players = "2 / 4 players")
-        Spacer(modifier = Modifier.height(16.dp))
-        GameCard(name = "Quiz Battle", category = "Quiz", players = "6 / 10 players")
+        // ----- Game cards from the catalog (Phase 2) -----
+        com.playroom.app.model.GameCatalog.games.forEach { game ->
+            GameCard(game = game)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
     }
 }
 
 @Composable
-private fun GameCard(name: String, category: String, players: String) {
+private fun GameCard(game: Game) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -101,18 +122,18 @@ private fun GameCard(name: String, category: String, players: String) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = name,
+                    text = "${game.emoji} ${game.name}",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
-                CategoryChip(category = category)
+                CategoryChip(category = game.category)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = players,
+                text = "${game.maxPlayers} players max",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
