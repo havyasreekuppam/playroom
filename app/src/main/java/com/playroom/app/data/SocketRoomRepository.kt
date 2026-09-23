@@ -39,6 +39,14 @@ class SocketRoomRepository(serverUrl: String = DEFAULT_SERVER_URL) {
 
     private val socket: Socket = IO.socket(serverUrl)
 
+    /**
+     * Last successful (or attempted) join, remembered so a temporary
+     * disconnect can be healed: on reconnect we simply re-emit join_room.
+     * Cleared on explicit leave / disconnect, so we never resurrect a room
+     * the user actually left.
+     */
+    private var rejoin: Pair<String, String>? = null // gameId to playerName
+
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Connecting)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
@@ -66,6 +74,12 @@ class SocketRoomRepository(serverUrl: String = DEFAULT_SERVER_URL) {
     private fun registerListeners() {
         socket.on(Socket.EVENT_CONNECT) {
             _connectionState.value = ConnectionState.Connected
+            // Reconnect after a drop: rejoin the room we were in, so the
+            // user does not stay stranded outside the room state.
+            rejoin?.let { (gameId, playerName) ->
+                Log.i(TAG, "reconnected - rejoining $gameId as $playerName")
+                emitJoin(gameId, playerName)
+            }
         }.on(Socket.EVENT_DISCONNECT) { args ->
             _connectionState.value = ConnectionState.Disconnected
             // Server gone / network dropped: reset room locally so the UI
@@ -115,11 +129,17 @@ class SocketRoomRepository(serverUrl: String = DEFAULT_SERVER_URL) {
     // ----- Actions called by ViewModels -----
 
     fun joinRoom(gameId: String, playerName: String) {
+        rejoin = gameId to playerName
+        emitJoin(gameId, playerName)
+    }
+
+    private fun emitJoin(gameId: String, playerName: String) {
         val payload = JSONObject().put("gameId", gameId).put("playerName", playerName)
         socket.emit("join_room", payload)
     }
 
     fun leaveRoom() {
+        rejoin = null // the user chose to leave - never auto-rejoin
         socket.emit("leave_room")
     }
 
@@ -129,6 +149,7 @@ class SocketRoomRepository(serverUrl: String = DEFAULT_SERVER_URL) {
 
     /** Called when the Activity is destroyed for good. */
     fun disconnect() {
+        rejoin = null
         socket.disconnect()
     }
 
