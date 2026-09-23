@@ -62,6 +62,7 @@ playroom/
 | `receive_message` | `{ roomId, sender, text, sentAt }` |
 | `left_room` | `{ roomId }` |
 | `room_error` | `{ code, message }` — `ROOM_FULL`, `UNKNOWN_GAME`, `NOT_IN_ROOM`, `EMPTY_MESSAGE` |
+| `rooms_snapshot` | `[{ roomId, gameId, players[], maxPlayers }]` — lobby-wide live counts, sent on connect and on every join/leave |
 
 Rooms are deleted when the last player leaves. An abrupt disconnect is
 treated exactly like leaving.
@@ -107,14 +108,17 @@ Open two emulators/devices to watch player counts and chat sync in real time.
 - ✅ Connection status indicator (connecting / connected / disconnected / failed)
 - ✅ Error surfacing: room full, unknown game, empty message → Snackbar
 - ✅ Multi-client integration test (12 assertions)
+- ✅ Live lobby player counts (`rooms_snapshot` broadcast on every join/leave)
+- ✅ Automatic room rejoin after a transient disconnect
+- ✅ Socket lifecycle cleanup on screen teardown (no leaked connections)
 
 ## Limitations / not implemented
 
 - No real gameplay — the MVP covers lobby/room presence and chat only.
 - Room state is in-memory; restarting the server resets everything, and
   it does not scale beyond one process.
-- No persistence, no auth, no reconnect-and-resume (a reconnecting client
-  must join again).
+- No persistence, no auth; a server restart still wipes rooms (clients do
+  auto-rejoin after a transient network drop, not after a restart).
 - One room per game (everyone who joins Chess lands in the same room).
 - The full end-to-end flow was verified with the automated multi-client
   socket test and Android builds; running the app itself on an emulator
