@@ -1,6 +1,7 @@
 package com.playroom.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,12 +25,15 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.playroom.app.model.Game
 import com.playroom.app.ui.theme.DeepBackground
 import com.playroom.app.ui.theme.NeonGreen
@@ -37,12 +41,13 @@ import com.playroom.app.ui.theme.NeonPurple
 import com.playroom.app.ui.theme.PlayRoomTheme
 
 /**
- * Phase 3: the lobby now renders a [Game] list and has a search bar.
- * Player counts are static for now - Phase 8 wires real-time counts.
- * JOIN ROOM still does nothing - it becomes real in Phase 7.
+ * Phase 4: stateless screen. All state comes from [LobbyViewModel] and all
+ * events go back to it, so the UI is easy to preview and test.
  */
 @Composable
-fun HomeScreen() {
+fun HomeScreen(viewModel: LobbyViewModel = viewModel()) {
+    val state by viewModel.state.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -66,16 +71,27 @@ fun HomeScreen() {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // ----- Search (Phase 3) -----
+        // ----- Search (Phase 3 + 4: live filtering via ViewModel) -----
         OutlinedTextField(
-            value = "",
-            onValueChange = { /* Phase 4: state moves into the ViewModel */ },
+            value = state.searchQuery,
+            onValueChange = viewModel::onSearchQueryChange,
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             placeholder = {
                 Text("Search games...", color = MaterialTheme.colorScheme.onSurfaceVariant)
             },
             leadingIcon = { Text(text = "🔍", fontSize = 18.sp) },
+            trailingIcon = {
+                if (state.isSearchActive) {
+                    Text(
+                        text = "✕",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .clickable { viewModel.clearSearch() }
+                            .padding(8.dp)
+                    )
+                }
+            },
             shape = RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = NeonGreen,
@@ -96,7 +112,7 @@ fun HomeScreen() {
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "🔥 Live Games",
+                text = if (state.isSearchActive) "Results" else "🔥 Live Games",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -104,10 +120,18 @@ fun HomeScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ----- Game cards from the catalog (Phase 2) -----
-        com.playroom.app.model.GameCatalog.games.forEach { game ->
-            GameCard(game = game)
-            Spacer(modifier = Modifier.height(16.dp))
+        // ----- Game cards -----
+        if (state.games.isEmpty()) {
+            Text(
+                text = "No games match \"${state.searchQuery.trim()}\".",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            state.games.forEach { game ->
+                GameCard(game = game)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
     }
 }
@@ -179,6 +203,6 @@ private fun CategoryChip(category: String) {
 @Composable
 private fun HomeScreenPreview() {
     PlayRoomTheme {
-        HomeScreen()
+        HomeScreen(viewModel = LobbyViewModel())
     }
 }
