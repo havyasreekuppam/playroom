@@ -29,6 +29,12 @@ class SocketRoomRepository(serverUrl: String = DEFAULT_SERVER_URL) {
         /** 10.0.2.2 = host loopback from the Android emulator. */
         const val DEFAULT_SERVER_URL = "http://10.0.2.2:3000"
         private const val TAG = "SocketRoomRepo"
+
+        /**
+         * One connection for the whole app. Both ViewModels use this single
+         * instance, so we can never end up with duplicate sockets.
+         */
+        val shared: SocketRoomRepository by lazy { SocketRoomRepository() }
     }
 
     private val socket: Socket = IO.socket(serverUrl)

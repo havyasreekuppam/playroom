@@ -25,7 +25,7 @@ data class RoomUiState(
 
 /** Phase 7-9: owns the socket repository for a room session. */
 class RoomViewModel(
-    private val repository: SocketRoomRepository = SocketRoomRepository()
+    private val repository: SocketRoomRepository = SocketRoomRepository.shared
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RoomUiState())
@@ -82,5 +82,13 @@ class RoomViewModel(
     fun onRoomClosed(onLeftRoom: () -> Unit) {
         leaveRoom()
         onLeftRoom()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // The screen/Activity is going away for good: close the shared
+        // socket so it can never leak. (Leaving just the room keeps the
+        // connection alive - the lobby still needs it for live counts.)
+        repository.disconnect()
     }
 }
