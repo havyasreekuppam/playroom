@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.playroom.app.ui.theme.DeepBackground
 import com.playroom.app.ui.theme.NeonGreen
 import com.playroom.app.ui.theme.NeonPurple
 import com.playroom.app.ui.theme.PlayRoomTheme
