@@ -45,7 +45,10 @@ import com.playroom.app.ui.theme.PlayRoomTheme
  * events go back to it, so the UI is easy to preview and test.
  */
 @Composable
-fun HomeScreen(viewModel: LobbyViewModel = viewModel()) {
+fun HomeScreen(
+    onJoinGame: (Game) -> Unit = {},
+    viewModel: LobbyViewModel = viewModel()
+) {
     val state by viewModel.state.collectAsState()
 
     Column(
@@ -129,7 +132,7 @@ fun HomeScreen(viewModel: LobbyViewModel = viewModel()) {
             )
         } else {
             state.games.forEach { game ->
-                GameCard(game = game)
+                GameCard(game = game, onJoin = onJoinGame)
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
@@ -137,7 +140,7 @@ fun HomeScreen(viewModel: LobbyViewModel = viewModel()) {
 }
 
 @Composable
-private fun GameCard(game: Game) {
+private fun GameCard(game: Game, onJoin: (Game) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -165,9 +168,7 @@ private fun GameCard(game: Game) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = {
-                    // Phase 7: emit "join_room" through the Socket.IO repository
-                },
+                onClick = { onJoin(game) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
