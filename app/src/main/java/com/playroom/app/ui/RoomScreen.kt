@@ -26,6 +26,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -34,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,15 +58,27 @@ import com.playroom.app.ui.theme.NeonPurple
 @Composable
 fun RoomScreen(viewModel: RoomViewModel, onLeave: () -> Unit = {}) {
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Phase 12: surface server errors (room full, empty message, ...).
+    LaunchedEffect(Unit) {
+        viewModel.errors.collect { error ->
+            snackbarHostState.showSnackbar(error)
+        }
+    }
 
     // Phase 10: system back while in a room leaves the room first.
     androidx.activity.compose.BackHandler {
         viewModel.onRoomClosed(onLeftRoom = onLeave)
     }
 
+    androidx.compose.material3.Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(innerPadding)
             .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
         val game = state.game
@@ -115,6 +130,7 @@ fun RoomScreen(viewModel: RoomViewModel, onLeave: () -> Unit = {}) {
                 }
             )
         }
+    }
     }
 }
 
