@@ -55,6 +55,13 @@ class LobbyViewModel(
         onSearchQueryChange("")
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        // Safety net for sessions that never opened a room screen:
+        // make sure the shared socket cannot outlive the UI.
+        repository.disconnect()
+    }
+
     private fun filterGames(query: String) {
         val trimmed = query.trim()
         _state.update { current ->
