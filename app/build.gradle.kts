@@ -36,15 +36,18 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
+    // Pinned to Compose 1.9.x / Material3 1.4.x - the newest line that
+    // compiles against SDK 36 (the latest platform available).
+    val composeBom = platform("androidx.compose:compose-bom:2025.09.00")
     implementation(composeBom)
 
     implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
     implementation("io.socket:socket.io-client:2.1.1")
-    implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.material3:material3")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
