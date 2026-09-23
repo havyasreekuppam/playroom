@@ -62,8 +62,14 @@ class SocketRoomRepository(serverUrl: String = DEFAULT_SERVER_URL) {
             _connectionState.value = ConnectionState.Connected
         }.on(Socket.EVENT_DISCONNECT) { args ->
             _connectionState.value = ConnectionState.Disconnected
-            // Server is gone or network dropped: leave the room locally too.
+            // Server gone / network dropped: reset room locally so the UI
+            // shows the join screen instead of a stale room. The error
+            // surfaced here is handled in Phase 12's UI wiring.
+            val wasInRoom = _roomState.value.isJoined
             _roomState.value = RoomState()
+            if (wasInRoom) {
+                _errors.tryEmit("Disconnected from server")
+            }
             Log.w(TAG, "disconnected: ${args.firstOrNull()}")
         }.on(Socket.EVENT_CONNECT_ERROR) { args ->
             val reason = args.firstOrNull()?.toString() ?: "unknown error"
