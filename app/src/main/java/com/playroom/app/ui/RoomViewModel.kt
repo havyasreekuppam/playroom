@@ -46,7 +46,21 @@ class RoomViewModel(
         }
         viewModelScope.launch {
             repository.connectionState.collect { conn ->
-                _state.update { it.copy(connection = conn) }
+                _state.update {
+                    it.copy(
+                        connection = conn,
+                        // A dropped/failed connection cancels any in-flight
+                        // join attempt so the button cannot get stuck.
+                        isJoining = it.isJoining && conn is ConnectionState.Connected
+                    )
+                }
+            }
+        }
+        // Phase 12: any server error (ROOM_FULL, UNKNOWN_GAME, ...) ends the
+        // join attempt - otherwise the button would stay on "JOINING...".
+        viewModelScope.launch {
+            repository.errors.collect {
+                _state.update { s -> s.copy(isJoining = false) }
             }
         }
     }
@@ -60,6 +74,8 @@ class RoomViewModel(
     fun joinRoom(playerName: String) {
         val game = _state.value.game ?: return
         if (_state.value.room.isJoined || _state.value.isJoining) return
+        // Defensive: never start a join we know cannot succeed.
+        if (_state.value.connection !is ConnectionState.Connected) return
         _state.update { it.copy(isJoining = true) }
         repository.joinRoom(gameId = game.id, playerName = playerName)
     }
@@ -68,7 +84,10 @@ class RoomViewModel(
     fun sendMessage(text: String) {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return
-        repository.sendMessage(trimmed)
+        // Socket.IO would buffer this while offline and flush it later;
+        // dropping it keeps the chat honest. Also mirrors the server cap.
+        if (_state.value.connection !is ConnectionState.Connected) return
+        repository.sendMessage(trimmed.take(300))
     }
 
     /** Phase 10: explicit LEAVE ROOM. */
