@@ -70,4 +70,17 @@ class RoomViewModel(
         if (trimmed.isEmpty()) return
         repository.sendMessage(trimmed)
     }
+
+    /** Phase 10: explicit LEAVE ROOM. */
+    fun leaveRoom() {
+        if (_state.value.room.isJoined) {
+            repository.leaveRoom()
+        }
+    }
+
+    /** Phase 10: system back while in a room = leave first. */
+    fun onRoomClosed(onLeftRoom: () -> Unit) {
+        leaveRoom()
+        onLeftRoom()
+    }
 }

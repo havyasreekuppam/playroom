@@ -52,7 +52,10 @@ class MainActivity : ComponentActivity() {
                 }
             )
 
-            is Screen.Room -> RoomScreen(viewModel = roomViewModel)
+            is Screen.Room -> RoomScreen(
+                viewModel = roomViewModel,
+                onLeave = { currentScreen = Screen.Lobby }
+            )
         }
     }
 }

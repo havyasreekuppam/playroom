@@ -50,11 +50,16 @@ import com.playroom.app.ui.theme.NeonGreen
 import com.playroom.app.ui.theme.NeonPurple
 
 /**
- * Phase 7-9: room screen with join, live players and chat.
+ * Phase 7-10: room screen with join, live players, chat and leave.
  */
 @Composable
-fun RoomScreen(viewModel: RoomViewModel) {
+fun RoomScreen(viewModel: RoomViewModel, onLeave: () -> Unit = {}) {
     val state by viewModel.state.collectAsState()
+
+    // Phase 10: system back while in a room leaves the room first.
+    androidx.activity.compose.BackHandler {
+        viewModel.onRoomClosed(onLeftRoom = onLeave)
+    }
 
     Column(
         modifier = Modifier
@@ -103,7 +108,11 @@ fun RoomScreen(viewModel: RoomViewModel) {
             JoinedSection(
                 state = state,
                 messages = viewModel.messages,
-                onSend = viewModel::sendMessage
+                onSend = viewModel::sendMessage,
+                onLeave = {
+                    viewModel.leaveRoom()
+                    onLeave()
+                }
             )
         }
     }
@@ -113,7 +122,8 @@ fun RoomScreen(viewModel: RoomViewModel) {
 private fun JoinedSection(
     state: RoomUiState,
     messages: kotlinx.coroutines.flow.Flow<ChatMessage>,
-    onSend: (String) -> Unit
+    onSend: (String) -> Unit,
+    onLeave: () -> Unit
 ) {
     val room = state.room
     val chat = remember { mutableStateOf(listOf<ChatMessage>()) }
@@ -189,6 +199,25 @@ private fun JoinedSection(
             ) {
                 Text("Send")
             }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // ----- Leave (Phase 10) -----
+        OutlinedButton(
+            onClick = onLeave,
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = "LEAVE ROOM",
+                color = DangerRed,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            )
         }
     }
 }
