@@ -23,13 +23,19 @@ data class RoomUiState(
     val isJoining: Boolean = false
 )
 
-/** Phase 7: owns the socket repository for a room session. */
+/** Phase 7-9: owns the socket repository for a room session. */
 class RoomViewModel(
     private val repository: SocketRoomRepository = SocketRoomRepository()
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RoomUiState())
     val state: StateFlow<RoomUiState> = _state.asStateFlow()
+
+    /** Phase 9: chat messages pushed by the server. */
+    val messages = repository.messages
+
+    /** Phase 12: one-shot server errors (room full, empty message, ...). */
+    val errors = repository.errors
 
     init {
         // Mirror repository state into UI state.
@@ -56,5 +62,12 @@ class RoomViewModel(
         if (_state.value.room.isJoined || _state.value.isJoining) return
         _state.update { it.copy(isJoining = true) }
         repository.joinRoom(gameId = game.id, playerName = playerName)
+    }
+
+    /** Phase 9: chat. */
+    fun sendMessage(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+        repository.sendMessage(trimmed)
     }
 }

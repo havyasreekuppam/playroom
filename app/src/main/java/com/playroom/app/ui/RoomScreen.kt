@@ -1,5 +1,6 @@
 package com.playroom.app.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,8 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -18,11 +25,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.playroom.app.data.ChatMessage
 import com.playroom.app.data.ConnectionState
 import com.playroom.app.ui.theme.DangerRed
 import com.playroom.app.ui.theme.DeepBackground
@@ -40,7 +50,7 @@ import com.playroom.app.ui.theme.NeonGreen
 import com.playroom.app.ui.theme.NeonPurple
 
 /**
- * Phase 7: room screen with name entry, JOIN ROOM and the player list.
+ * Phase 7-9: room screen with join, live players and chat.
  */
 @Composable
 fun RoomScreen(viewModel: RoomViewModel) {
@@ -90,7 +100,128 @@ fun RoomScreen(viewModel: RoomViewModel) {
                 onJoin = viewModel::joinRoom
             )
         } else {
-            PlayersCard(state = state)
+            JoinedSection(
+                state = state,
+                messages = viewModel.messages,
+                onSend = viewModel::sendMessage
+            )
+        }
+    }
+}
+
+@Composable
+private fun JoinedSection(
+    state: RoomUiState,
+    messages: kotlinx.coroutines.flow.Flow<ChatMessage>,
+    onSend: (String) -> Unit
+) {
+    val room = state.room
+    val chat = remember { mutableStateOf(listOf<ChatMessage>()) }
+
+    // Phase 9: collect chat messages into a simple list.
+    LaunchedEffect(Unit) {
+        messages.collect { message ->
+            chat.value = chat.value + message
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        PlayersCard(state = state)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // ----- Chat (Phase 9) -----
+        Text(
+            text = "Room chat",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        val listState = rememberLazyListState()
+        LaunchedEffect(chat.value.size) {
+            if (chat.value.isNotEmpty()) {
+                listState.animateScrollToItem(chat.value.lastIndex)
+            }
+        }
+
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(chat.value) { message ->
+                ChatBubble(message = message, myName = room.yourName)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // ----- Message input -----
+        var draft by remember { mutableStateOf("") }
+        Row(verticalAlignment = Alignment.Bottom) {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                placeholder = { Text("Message...") },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = NeonGreen,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                )
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    onSend(draft)
+                    draft = ""
+                },
+                enabled = draft.isNotBlank(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = NeonPurple,
+                    contentColor = androidx.compose.ui.graphics.Color.White
+                )
+            ) {
+                Text("Send")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatBubble(message: ChatMessage, myName: String) {
+    val isMine = message.sender == myName
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = if (isMine) Alignment.End else Alignment.Start
+    ) {
+        Surface(
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isMine) 16.dp else 4.dp,
+                bottomEnd = if (isMine) 4.dp else 16.dp
+            ),
+            color = if (isMine) NeonPurple.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                Text(
+                    text = message.sender,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (isMine) NeonGreen else NeonPurple,
+                    fontSize = 12.sp
+                )
+                Text(
+                    text = message.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
