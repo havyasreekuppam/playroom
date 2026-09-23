@@ -5,13 +5,15 @@
  *   join_room    { gameId, playerName }   -> joins (or creates) the room for that game
  *   leave_room   {}                       -> leaves the current room
  *   send_message { text }                 -> chat to everyone in the room
- *   list_rooms   {}                       -> snapshot of every room (used on connect)
  *
  * Events the server sends (server -> client):
  *   joined_room      { gameId, roomId, players, maxPlayers }
  *   room_update      { roomId, gameId, players: [{id, name}], maxPlayers }
  *   receive_message  { roomId, sender, text, sentAt }
  *   room_error       { code, message }    e.g. room full, no room, bad input
+ *   rooms_snapshot   [{roomId, gameId, players, maxPlayers}]
+ *                                    lobby-wide snapshot with live counts,
+ *                                    sent on connect and on every change
  */
 const express = require("express");
 const http = require("http");
@@ -67,6 +69,15 @@ function broadcastRoomUpdate(room) {
   io.to(room.id).emit("room_update", roomSnapshot(room));
 }
 
+/** Lobby-wide snapshot: every room, so clients can show live counts. */
+function lobbySnapshot() {
+  return Array.from(rooms.values()).map(roomSnapshot);
+}
+
+function broadcastLobby() {
+  io.emit("rooms_snapshot", lobbySnapshot());
+}
+
 app.get("/", (_req, res) => {
   res.json({ status: "ok", service: "playroom-server" });
 });
@@ -87,10 +98,7 @@ io.on("connection", (socket) => {
   console.log(`[conn] ${socket.id} connected`);
 
   // Snapshot of all rooms, useful right after connect.
-  socket.emit(
-    "rooms_snapshot",
-    Array.from(rooms.values()).map(roomSnapshot)
-  );
+  socket.emit("rooms_snapshot", lobbySnapshot());
 
   /** Sanitize a name: trim, cap length, fall back to "Player". */
   function safeName(raw, fallback) {
@@ -126,6 +134,7 @@ io.on("connection", (socket) => {
 
     socket.emit("joined_room", { ...roomSnapshot(room), yourName: name });
     broadcastRoomUpdate(room);
+    broadcastLobby();
     console.log(`[join] ${name} (${socket.id}) -> ${room.id} (${room.players.size}/${room.maxPlayers})`);
   });
 
@@ -186,6 +195,8 @@ function leaveRoom(socket, room) {
   } else {
     broadcastRoomUpdate(room);
   }
+  // Counts changed (or the room vanished) - tell every connected lobby.
+  broadcastLobby();
 }
 
 server.listen(PORT, () => {

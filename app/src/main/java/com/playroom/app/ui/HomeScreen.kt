@@ -139,7 +139,11 @@ fun HomeScreen(
             )
         } else {
             state.games.forEach { game ->
-                GameCard(game = game, onJoin = onJoinGame)
+                GameCard(
+                    game = game,
+                    playerCount = state.playerCounts[game.id] ?: 0,
+                    onJoin = onJoinGame
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
@@ -147,7 +151,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun GameCard(game: Game, onJoin: (Game) -> Unit) {
+private fun GameCard(game: Game, playerCount: Int, onJoin: (Game) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -167,11 +171,24 @@ private fun GameCard(game: Game, onJoin: (Game) -> Unit) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = "${game.maxPlayers} players max",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(
+                            color = if (playerCount > 0) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                            shape = RoundedCornerShape(50)
+                        )
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (playerCount > 0) "$playerCount playing \u00b7 ${game.maxPlayers} max"
+                    else "Empty \u00b7 ${game.maxPlayers} max",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (playerCount > 0) NeonGreen
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

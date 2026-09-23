@@ -1,12 +1,15 @@
 package com.playroom.app.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.playroom.app.data.SocketRoomRepository
 import com.playroom.app.model.Game
 import com.playroom.app.model.GameCatalog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
  * All state the lobby screen needs. One immutable object -> easy to render
@@ -14,7 +17,9 @@ import kotlinx.coroutines.flow.update
  */
 data class LobbyUiState(
     val searchQuery: String = "",
-    val games: List<Game> = GameCatalog.games
+    val games: List<Game> = GameCatalog.games,
+    /** gameId -> live player count from the server (rooms_snapshot). */
+    val playerCounts: Map<String, Int> = emptyMap()
 ) {
     val isSearchActive: Boolean get() = searchQuery.isNotBlank()
 }
@@ -23,10 +28,21 @@ data class LobbyUiState(
  * Phase 4: MVVM. The screen observes [state] and calls methods on this
  * ViewModel; it never owns state itself.
  */
-class LobbyViewModel : ViewModel() {
+class LobbyViewModel(
+    private val repository: SocketRoomRepository = SocketRoomRepository.shared
+) : ViewModel() {
 
     private val _state = MutableStateFlow(LobbyUiState())
     val state: StateFlow<LobbyUiState> = _state.asStateFlow()
+
+    init {
+        // Live lobby: the server pushes a rooms_snapshot on every join/leave.
+        viewModelScope.launch {
+            repository.lobbyRooms.collect { counts ->
+                _state.update { it.copy(playerCounts = counts) }
+            }
+        }
+    }
 
     /** Called on every keystroke in the search field. Filters in memory. */
     fun onSearchQueryChange(query: String) {

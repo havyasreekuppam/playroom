@@ -53,6 +53,10 @@ class SocketRoomRepository(serverUrl: String = DEFAULT_SERVER_URL) {
     private val _roomState = MutableStateFlow(RoomState())
     val roomState: StateFlow<RoomState> = _roomState.asStateFlow()
 
+    /** gameId -> current player count, from the server's rooms_snapshot. */
+    private val _lobbyRooms = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val lobbyRooms: StateFlow<Map<String, Int>> = _lobbyRooms.asStateFlow()
+
     private val _messages = MutableSharedFlow<ChatMessage>(
         extraBufferCapacity = 32,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
@@ -119,6 +123,19 @@ class SocketRoomRepository(serverUrl: String = DEFAULT_SERVER_URL) {
                     isMine = sender == _roomState.value.yourName
                 )
                 _messages.tryEmit(message)
+            }
+            .on("rooms_snapshot") { args ->
+                val snapshot = args.firstOrNull() as? JSONArray ?: return@on
+                val counts = buildMap {
+                    for (i in 0 until snapshot.length()) {
+                        val room = snapshot.optJSONObject(i) ?: continue
+                        val gameId = room.optString("gameId")
+                        if (gameId.isNotEmpty()) {
+                            put(gameId, room.optJSONArray("players")?.length() ?: 0)
+                        }
+                    }
+                }
+                _lobbyRooms.value = counts
             }
             .on("room_error") { args ->
                 val json = args.firstOrNull() as? JSONObject ?: return@on
