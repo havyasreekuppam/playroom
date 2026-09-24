@@ -16,3 +16,6 @@ captures/
 
 # Node backend (Phase 5)
 node_modules/
+
+# Freebuff tooling metadata
+.freebuff/
